@@ -269,7 +269,7 @@ render_boxed_text endp
 ;         DX - ширина в байтах
 ;         BP - высота
 ; Exit:   -
-; Destr:  AX, CX, DI, SI
+; Destr:  AX, CX, SI
 ; ================================
 draw_frame_around_text proc
         push di
@@ -421,10 +421,10 @@ print_text_inside_frame endp
 ;         AX - длинна
 ;         SI, CX - продвинуты до конца строки
 ; Exp:    - 
-; Destr:  AX, DX, DI, AL
+; Destr:  AX, DX, AL
 ; ================================
 parse_line_trim proc
-        push di;TODO - 
+        push di
         push bx
 
         call skip_leading_spaces
@@ -468,11 +468,11 @@ parse_line_trim endp
 ;         AX - длина
 ;         BX - ширина
 ; Exit:   DI - аддрес места конца вывода текста
-; Destr:  AX, CX, DX, SI
+; Destr:  AX, DX
 ; ================================
 print_line_padded proc
-        push si ;TODO -
-        push cx ;TODO -
+        push si 
+        push cx 
         push ax                              ; сохранить длинну
 
         mov  si, dx                          ; SI = line_start
@@ -579,4 +579,3 @@ FRAME_CHARS  dw FRAME_STYLE1
 
 end start
 
-;TODO - Как относиться к оптимизации?  У меня 2 прохода. потому что мне показалось, что так будет удобнее писать
