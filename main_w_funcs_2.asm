@@ -294,7 +294,7 @@ draw_frame_around_text endp
 ; Destr:  AX, CX, DI, SI
 ; ================================
 draw_frame_top proc
-        mov  ax,  ;TODO -
+        mov  ax, di;TODO -
         sub  ax, ROW_BYTES
         mov  di, ax                          ; DI = top-left
 
@@ -563,7 +563,7 @@ FRAME_WB    dw 0
 
 FRAME_STYLE1 db 0C9h, 0BBh, 0C8h, 0BCh, 0CDh, 0BAh ; ╔ ╗ ╚ ╝ ═ ║ ;TODO - Как перенести наверх
 FRAME_STYLE2 db '+', '+', '+', '+', '-', '|'       ; + + + + - |
-FRAME_STYLE3 db '#', '#', '#', '#', '#', '#'  ; # # # # # #
+FRAME_STYLE3 db '#', '#', '#', '#', '#', '#'       ; # # # # # #
 
 FRAME_STYLE_TABLE dw offset FRAME_STYLE1
                   dw offset FRAME_STYLE2
