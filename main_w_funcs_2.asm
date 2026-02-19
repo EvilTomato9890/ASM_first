@@ -6,7 +6,8 @@ LOCALS @@
 CMD_LEN    equ 80h
 CMD_TAIL   equ 81h
 
-LINE_SEP    equ '%'
+LINE_SEP   equ '%'
+STYLE_SEP  equ '#'
 
 VIDEO_SEG  equ 0B800h
 COLOR      equ 07h            ; gray on black
@@ -17,11 +18,11 @@ ROW_BYTES  equ 160            ; 80*2
 START_DI   equ (ROW*80 + COL)*2
 
 CH_TL      equ 0d           ;(левый  верхний угол)
-CH_TR      equ 2d           ;(правый верхний угол)
-CH_BL      equ 4d           ;(левый  нижний  угол)
-CH_BR      equ 6d           ;(правый нижний  угол)
-CH_H       equ 8d           ;(низ и верх)
-CH_V       equ 10d          ;(право и лево)
+CH_TR      equ 1d           ;(правый верхний угол)
+CH_BL      equ 2d           ;(левый  нижний  угол)
+CH_BR      equ 3d           ;(правый нижний  угол)
+CH_H       equ 4d           ;(низ и верх)
+CH_V       equ 5d          ;(право и лево)
 
 
 
@@ -82,10 +83,51 @@ read_cmd_tail_trim_spaces proc
 
         call skip_leading_spaces
         call trim_trailing_spaces
+        call parse_style_prefix
 
         mov  bx, cx
         ret
 read_cmd_tail_trim_spaces endp
+
+; ================================
+; Entry:  DS:SI, CX - начало текста и длина
+; Exit:   DS:SI, CX - возможно сдвинуты
+;         FRAME_CHARS - выбранный стиль
+; Exp:    После # есть символ
+; Destr:  AX, BX, DX, AL
+; ================================
+parse_style_prefix proc
+        cmp  cx, 2
+        jb   @@done
+
+        mov  al, byte ptr ds:[si]
+        cmp  al, STYLE_SEP
+        jne  @@done
+
+        mov  al, byte ptr ds:[si+1]
+        cmp  al, '1'
+        jb   @@done
+        cmp  al, '9'
+        ja   @@done
+
+
+        sub  al, '1'               ; style index
+        xor  ah, ah
+        shl  ax, 1                 ; word index
+        mov  bx, ax
+
+        mov  dx, word ptr [FRAME_STYLE_TABLE + bx]
+        mov  word ptr [FRAME_CHARS], dx
+
+        add  si, 2
+        sub  cx, 2
+
+        call skip_leading_spaces
+        call trim_trailing_spaces
+
+@@done:
+        ret
+parse_style_prefix endp
 
 ; ================================
 ; Entry:  DS:SI - начало 
@@ -213,9 +255,7 @@ render_boxed_text proc
         mov  bp, word ptr [FRAME_H]
         mov  dx, word ptr [FRAME_WB]
 
-        push di
         call draw_frame_around_text
-        pop  di
 
         mov  si, word ptr [CMD_PTR_VAR]
         mov  cx, word ptr [CMD_LEN_VAR]
@@ -224,12 +264,12 @@ render_boxed_text proc
 render_boxed_text endp
 
 ; ================================
-; Entry:  DI - адрес слева
+; Entry:  DI - аддрес места вывода текста
 ;         BX - макс ширина
 ;         DX - ширина в байтах
 ;         BP - высота
 ; Exit:   -
-; Destr:  AX, CX, DI
+; Destr:  AX, CX, DI, SI
 ; ================================
 draw_frame_around_text proc
         push di
@@ -248,21 +288,23 @@ draw_frame_around_text proc
 draw_frame_around_text endp
 
 ; ================================
-; Entry:  DI - адрес слева
+; Entry:  DI - аддрес места вывода текста
 ;         BX - ширина
 ; Exit:   -
-; Destr:  AX, CX, DI
+; Destr:  AX, CX, DI, SI
 ; ================================
 draw_frame_top proc
-        mov  ax, di
+        mov  ax,  ;TODO -
         sub  ax, ROW_BYTES
         mov  di, ax                          ; DI = top-left
 
         mov  ah, COLOR
-        mov  al, byte ptr [FRAME_CHARS + CH_TL]
+        
+        mov  si, [FRAME_CHARS]
+        mov  al, byte ptr [si + CH_TL]
         mov  word ptr es:[di], ax
 
-        mov  al, byte ptr [FRAME_CHARS + CH_H]
+        mov  al, byte ptr [si + CH_H]
         add  di, 2
         mov  cx, bx
         jcxz @@no_h
@@ -273,13 +315,13 @@ draw_frame_top proc
         loop @@top_h
 
 @@no_h:
-        mov  al, byte ptr [FRAME_CHARS + CH_TR]
+        mov  al, byte ptr [si + CH_TR]
         mov  word ptr es:[di], ax
         ret
 draw_frame_top endp
 
 ; ================================
-; Entry:  DI - адрес слева
+; Entry:  DI - аддрес места вывода текста
 ;         DX - ширина в байтах
 ;         BP - высота
 ; Exit:   -
@@ -287,7 +329,8 @@ draw_frame_top endp
 ; ================================
 draw_frame_sides proc
         mov  ah, COLOR
-        mov  al, byte ptr [FRAME_CHARS + CH_V]
+        mov  si, [FRAME_CHARS]
+        mov  al, byte ptr [si + CH_V]
 
         mov  cx, bp
         jcxz @@done
@@ -309,11 +352,11 @@ draw_frame_sides proc
 draw_frame_sides endp
 
 ; ================================
-; Entry:  DI - адрес слева
+; Entry:  DI - аддрес места вывода текста
 ;         BX - ширина
 ;         BP - высота 
 ; Exit:   -
-; Destr:  AX, CX, DI
+; Destr:  AX, CX, DI, SI
 ; ================================
 draw_frame_bottom proc
         mov  cx, bp
@@ -324,10 +367,11 @@ draw_frame_bottom proc
         loop @@move_down
 @@at_bottom:
         mov  ah, COLOR
-        mov  al, byte ptr [FRAME_CHARS + CH_BL]
+        mov  si, [FRAME_CHARS]
+        mov  al, byte ptr [si + CH_BL]
         mov  word ptr es:[di], ax
 
-        mov  al, byte ptr [FRAME_CHARS + CH_H]
+        mov  al, byte ptr [si + CH_H]
         add  di, 2
         mov  cx, bx
         jcxz @@no_h
@@ -338,13 +382,13 @@ draw_frame_bottom proc
         loop @@bot_h
 
 @@no_h:
-        mov  al, byte ptr [FRAME_CHARS + CH_BR]
+        mov  al, byte ptr [si + CH_BR]
         mov  word ptr es:[di], ax
         ret
 draw_frame_bottom endp
 
 ; ================================
-; Entry:  DI - адрес слева
+; Entry:  DI - аддрес места вывода текста
 ;         BX - ширина
 ;         BP - высота
 ;         DS:SI, CX - хвост командной строки
@@ -380,7 +424,7 @@ print_text_inside_frame endp
 ; Destr:  AX, DX, DI, AL
 ; ================================
 parse_line_trim proc
-        push di
+        push di;TODO - 
         push bx
 
         call skip_leading_spaces
@@ -397,7 +441,7 @@ parse_line_trim proc
         mov  al, byte ptr ds:[si]
         cmp  al, LINE_SEP
         je   @@done
-
+        
         cmp  al, ' '
         je   @@space
 
@@ -423,12 +467,12 @@ parse_line_trim endp
 ;         DS:DX - начало строки
 ;         AX - длина
 ;         BX - ширина
-; Exit:   DI - аддрес конца
+; Exit:   DI - аддрес места конца вывода текста
 ; Destr:  AX, CX, DX, SI
 ; ================================
 print_line_padded proc
-        push si
-        push cx
+        push si ;TODO -
+        push cx ;TODO -
         push ax                              ; сохранить длинну
 
         mov  si, dx                          ; SI = line_start
@@ -484,7 +528,7 @@ consume_line_separator endp
 
 
 ; ================================
-; Entry:  DI - конец строки
+; Entry:  DI - аддрес места вывода строки
 ; Exit:   DI - START_DI следующей строки
 ; Exp:    FRAME_WB = 2*FRAME_W
 ; Destr:  AX
@@ -507,6 +551,7 @@ dos_exit proc
 dos_exit endp
 
 
+.data
 
 CMD_PTR_VAR dw 0
 CMD_LEN_VAR dw 0
@@ -515,10 +560,23 @@ FRAME_W     dw 0
 FRAME_H     dw 0
 FRAME_WB    dw 0
 
-.data
+
 FRAME_STYLE1 db 0C9h, 0BBh, 0C8h, 0BCh, 0CDh, 0BAh ; ╔ ╗ ╚ ╝ ═ ║ ;TODO - Как перенести наверх
-FRAME_STYLE2 db 02Fh, 02Dh, 05ch, 02Fh, 02Dh, 07Ch ; / \ \ / - |
+FRAME_STYLE2 db '+', '+', '+', '+', '-', '|'       ; + + + + - |
+FRAME_STYLE3 db '#', '#', '#', '#', '#', '#'  ; # # # # # #
+
+FRAME_STYLE_TABLE dw offset FRAME_STYLE1
+                  dw offset FRAME_STYLE2
+                  dw offset FRAME_STYLE3
+                  dw offset FRAME_STYLE1
+                  dw offset FRAME_STYLE1
+                  dw offset FRAME_STYLE1
+                  dw offset FRAME_STYLE1
+                  dw offset FRAME_STYLE1
+                  dw offset FRAME_STYLE1
+
 FRAME_CHARS  dw FRAME_STYLE1
 
 end start
 
+;TODO - Как относиться к оптимизации?  У меня 2 прохода. потому что мне показалось, что так будет удобнее писать
