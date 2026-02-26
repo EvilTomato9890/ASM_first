@@ -2,7 +2,7 @@
 .code
 org 100h
 LOCALS @@
-
+;.JUMPS
 CMD_LEN    equ 80h
 CMD_TAIL   equ 81h
 
