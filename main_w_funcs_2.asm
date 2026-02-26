@@ -517,7 +517,7 @@ parse_line_trim endp
 
 
 ; ================================
-; Desc: Печатает строку и добивает оставшуюся ширину пробелами.
+; Desc: Центрирует строку в ширине рамки и добивает пробелами слева/справа.
 ; Entry:  ES:DI                   
 ;         DS:DX - начало строки
 ;         AX - длина
@@ -528,34 +528,50 @@ parse_line_trim endp
 print_line_padded proc
         push si 
         push cx 
-        push ax                              ; сохранить длинну
+        push bp
+        push dx                              ; line_start
+        push ax                              ; effective_len
 
-        mov  si, dx                          ; SI = line_start
-        mov  cx, ax
+        mov  cx, bx
+        sub  cx, ax                          ; total_pad = width - len
+        mov  bp, cx
+        shr  cx, 1                           ; left_pad = total_pad / 2
+        mov  dx, bp
+        sub  dx, cx                          ; right_pad = total_pad - left_pad
+
+        mov  al, ' '
         mov  ah, COLOR
+        jcxz @@after_left_pad
+@@left_pad_loop:
+        mov  word ptr es:[di], ax
+        add  di, 2
+        loop @@left_pad_loop
 
+@@after_left_pad:
+        pop  ax                              ; AX = effective_len
+        pop  si                              ; SI = line_start
+        mov  cx, ax
         jcxz @@after_chars
 @@print_chars:
         mov  al, byte ptr ds:[si]
+        mov  ah, COLOR
         mov  word ptr es:[di], ax
         inc  si
         add  di, 2
         loop @@print_chars
 
 @@after_chars:
-        pop  dx                              ; DX = effective_len
-        mov  cx, bx
-        sub  cx, dx
+        mov  cx, dx
         jcxz @@done
-
         mov  al, ' '
         mov  ah, COLOR
-@@pad_loop:
+@@right_pad_loop:
         mov  word ptr es:[di], ax
         add  di, 2
-        loop @@pad_loop
+        loop @@right_pad_loop
 
 @@done:
+        pop  bp
         pop  cx
         pop  si
         ret
