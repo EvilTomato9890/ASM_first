@@ -141,10 +141,10 @@ parse_style_prefix proc
 parse_style_prefix endp
 
 ; ================================
-; Desc: Для префикса #9 считывает 6 символов рамки из хвоста.
-;       Порядок: TL TR BL BR H V.
+; Desc: Для префикса #9 считывает символы рамки из хвоста.
+;       Обязательные 5: TL TR BL BR H, 6-й (V) опционален.
 ; Entry: DS:SI, CX - позиция сразу после "#9"
-; Exit:  При успехе: SI/CX сдвинуты после 6 символов, FRAME_CHARS=custom
+; Exit:  При успехе: SI/CX сдвинуты после 5/6 символов, FRAME_CHARS=custom
 ;        При ошибке: SI/CX восстановлены
 ; Destr: AX, BX, DI
 ; ================================
@@ -153,11 +153,11 @@ parse_style9_custom_chars proc
         push cx
 
         call skip_leading_spaces
-        cmp  cx, 6
+        cmp  cx, 5
         jb   @@restore
 
         mov  di, offset FRAME_STYLE9_CUSTOM
-        mov  bx, 6
+        mov  bx, 5
 
 @@copy_loop:
         mov  al, byte ptr ds:[si]
@@ -169,6 +169,23 @@ parse_style9_custom_chars proc
         dec  bx
         jnz  @@copy_loop
 
+        mov  al, '|'
+        mov  ah, COLOR
+        or   cx, cx
+        jz   @@store_v
+
+        mov  bl, byte ptr ds:[si]
+        cmp  bl, ' '
+        je   @@store_v
+        cmp  bl, LINE_SEP
+        je   @@store_v
+
+        mov  al, bl
+        inc  si
+        dec  cx
+
+@@store_v:
+        mov  word ptr [di], ax
         mov  word ptr [FRAME_CHARS], offset FRAME_STYLE9_CUSTOM
         add  sp, 4
         ret
@@ -313,6 +330,7 @@ render_boxed_text proc
 
         mov  si, word ptr [CMD_PTR_VAR]
         mov  cx, word ptr [CMD_LEN_VAR]
+        mov  byte ptr [TEXT_COLOR_INDEX], 0
         call print_text_inside_frame
         ret
 render_boxed_text endp
@@ -528,6 +546,7 @@ parse_line_trim endp
 print_line_padded proc
         push si 
         push cx 
+        push bx
         push bp
         push dx                              ; line_start
         push ax                              ; effective_len
@@ -552,13 +571,23 @@ print_line_padded proc
         pop  si                              ; SI = line_start
         mov  cx, ax
         jcxz @@after_chars
+
+        xor  bx, bx
+        mov  bl, byte ptr [TEXT_COLOR_INDEX]
 @@print_chars:
         mov  al, byte ptr ds:[si]
-        mov  ah, COLOR
+        mov  ah, byte ptr [TEXT_COLOR_TABLE + bx]
         mov  word ptr es:[di], ax
         inc  si
         add  di, 2
+
+        inc  bl
+        cmp  bl, 6
+        jb   @@color_ok
+        xor  bl, bl
+@@color_ok:
         loop @@print_chars
+        mov  byte ptr [TEXT_COLOR_INDEX], bl
 
 @@after_chars:
         mov  cx, dx
@@ -572,6 +601,7 @@ print_line_padded proc
 
 @@done:
         pop  bp
+        pop  bx
         pop  cx
         pop  si
         ret
@@ -629,6 +659,9 @@ dos_exit endp
 
 CMD_PTR_VAR dw 0
 CMD_LEN_VAR dw 0
+
+TEXT_COLOR_TABLE db 09h, 0Ah, 0Bh, 0Ch, 0Dh, 0Eh
+TEXT_COLOR_INDEX db 0
 
 FRAME_W     dw 0
 FRAME_H     dw 0
