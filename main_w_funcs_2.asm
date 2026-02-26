@@ -61,7 +61,7 @@ program_exit:
 ; Destr:  AX
 ; ================================
 init_runtime proc
-        push cs ; TODO - Лучши ли mov?
+        push cs ;; TODO - Лучши ли mov?
         pop  ds
 
         mov  ax, VIDEO_SEG
@@ -294,17 +294,13 @@ draw_frame_around_text endp
 ; Destr:  AX, CX, DI, SI
 ; ================================
 draw_frame_top proc
-        mov  ax, di;TODO -
-        sub  ax, ROW_BYTES
-        mov  di, ax                          ; DI = top-left
+        sub  di, ROW_BYTES                          ; DI = top-left
 
-        mov  ah, COLOR
-        
         mov  si, [FRAME_CHARS]
-        mov  al, byte ptr [si + CH_TL]
+        mov  ax, word ptr [si + CH_TL]
         mov  word ptr es:[di], ax
 
-        mov  al, byte ptr [si + CH_H]
+        mov  ax, word ptr [si + CH_H]
         add  di, 2
         mov  cx, bx
         jcxz @@no_h
@@ -315,7 +311,7 @@ draw_frame_top proc
         loop @@top_h
 
 @@no_h:
-        mov  al, byte ptr [si + CH_TR]
+        mov  ax, word ptr [si + CH_TR]
         mov  word ptr es:[di], ax
         ret
 draw_frame_top endp
@@ -328,9 +324,8 @@ draw_frame_top endp
 ; Destr:  AX, CX, DI, SI
 ; ================================
 draw_frame_sides proc
-        mov  ah, COLOR
         mov  si, [FRAME_CHARS]
-        mov  al, byte ptr [si + CH_V]
+        mov  ax, word ptr [si + CH_V]
 
         mov  cx, bp
         jcxz @@done
@@ -366,12 +361,11 @@ draw_frame_bottom proc
         add  di, ROW_BYTES
         loop @@move_down
 @@at_bottom:
-        mov  ah, COLOR
         mov  si, [FRAME_CHARS]
-        mov  al, byte ptr [si + CH_BL]
+        mov  ax, word ptr [si + CH_BL]
         mov  word ptr es:[di], ax
 
-        mov  al, byte ptr [si + CH_H]
+        mov  ax, word ptr [si + CH_H]
         add  di, 2
         mov  cx, bx
         jcxz @@no_h
@@ -382,7 +376,7 @@ draw_frame_bottom proc
         loop @@bot_h
 
 @@no_h:
-        mov  al, byte ptr [si + CH_BR]
+        mov  ax, word ptr [si + CH_BR]
         mov  word ptr es:[di], ax
         ret
 draw_frame_bottom endp
@@ -596,4 +590,3 @@ FRAME_STYLE_TABLE dw offset FRAME_STYLE1
 FRAME_CHARS  dw FRAME_STYLE1
 
 end start
-
