@@ -113,6 +113,12 @@ parse_style_prefix proc
         cmp  al, '9'
         ja   @@done
 
+        add  si, 2
+        sub  cx, 2
+
+        cmp  al, '9'
+        je   @@custom_style
+
 
         sub  al, '1'               ; style index
         xor  ah, ah
@@ -121,16 +127,57 @@ parse_style_prefix proc
 
         mov  dx, word ptr [FRAME_STYLE_TABLE + bx]
         mov  word ptr [FRAME_CHARS], dx
+        jmp  @@trim_text
 
-        add  si, 2
-        sub  cx, 2
+@@custom_style:
+        call parse_style9_custom_chars
 
+@@trim_text:
         call skip_leading_spaces
         call trim_trailing_spaces
 
 @@done:
         ret
 parse_style_prefix endp
+
+; ================================
+; Desc: Для префикса #9 считывает 6 символов рамки из хвоста.
+;       Порядок: TL TR BL BR H V.
+; Entry: DS:SI, CX - позиция сразу после "#9"
+; Exit:  При успехе: SI/CX сдвинуты после 6 символов, FRAME_CHARS=custom
+;        При ошибке: SI/CX восстановлены
+; Destr: AX, BX, DI
+; ================================
+parse_style9_custom_chars proc
+        push si
+        push cx
+
+        call skip_leading_spaces
+        cmp  cx, 6
+        jb   @@restore
+
+        mov  di, offset FRAME_STYLE9_CUSTOM
+        mov  bx, 6
+
+@@copy_loop:
+        mov  al, byte ptr ds:[si]
+        mov  ah, COLOR
+        mov  word ptr [di], ax
+        add  di, 2
+        inc  si
+        dec  cx
+        dec  bx
+        jnz  @@copy_loop
+
+        mov  word ptr [FRAME_CHARS], offset FRAME_STYLE9_CUSTOM
+        add  sp, 4
+        ret
+
+@@restore:
+        pop  cx
+        pop  si
+        ret
+parse_style9_custom_chars endp
 
 ; ================================
 ; Desc: Удаляет пробелы в конце текста.
@@ -593,6 +640,13 @@ FRAME_STYLE3 dw (07h shl 8) + '#'
              dw (07h shl 8) + '#' 
              dw (07h shl 8) + '#' 
              dw (07h shl 8) + '#'   
+
+FRAME_STYLE9_CUSTOM dw (07h shl 8) + '+'
+                    dw (07h shl 8) + '+'
+                    dw (07h shl 8) + '+'
+                    dw (07h shl 8) + '+'
+                    dw (07h shl 8) + '-'
+                    dw (07h shl 8) + '|'
 
 FRAME_STYLE_TABLE dw offset FRAME_STYLE1
                   dw offset FRAME_STYLE2
