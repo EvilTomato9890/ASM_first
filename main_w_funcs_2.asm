@@ -18,11 +18,11 @@ ROW_BYTES  equ 160            ; 80*2
 START_DI   equ (ROW*80 + COL)*2
 
 CH_TL      equ 0d           ;(левый  верхний угол)
-CH_TR      equ 1d           ;(правый верхний угол)
-CH_BL      equ 2d           ;(левый  нижний  угол)
-CH_BR      equ 3d           ;(правый нижний  угол)
-CH_H       equ 4d           ;(низ и верх)
-CH_V       equ 5d          ;(право и лево)
+CH_TR      equ 2d           ;(правый верхний угол)
+CH_BL      equ 4d           ;(левый  нижний  угол)
+CH_BR      equ 6d           ;(правый нижний  угол)
+CH_H       equ 8d           ;(низ и верх)
+CH_V       equ 10d          ;(право и лево)
 
 
 
