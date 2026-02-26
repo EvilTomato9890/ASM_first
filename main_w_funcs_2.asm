@@ -142,9 +142,9 @@ parse_style_prefix endp
 
 ; ================================
 ; Desc: Для префикса #9 считывает символы рамки из хвоста.
-;       Обязательные 5: TL TR BL BR H, 6-й (V) опционален.
+;       Обязательные 6: TL TR BL BR H V.
 ; Entry: DS:SI, CX - позиция сразу после "#9"
-; Exit:  При успехе: SI/CX сдвинуты после 5/6 символов, FRAME_CHARS=custom
+; Exit:  При успехе: SI/CX сдвинуты после 6 символов, FRAME_CHARS=custom
 ;        При ошибке: SI/CX восстановлены
 ; Destr: AX, BX, DI
 ; ================================
@@ -153,11 +153,11 @@ parse_style9_custom_chars proc
         push cx
 
         call skip_leading_spaces
-        cmp  cx, 5
+        cmp  cx, 6
         jb   @@restore
 
         mov  di, offset FRAME_STYLE9_CUSTOM
-        mov  bx, 5
+        mov  bx, 6
 
 @@copy_loop:
         mov  al, byte ptr ds:[si]
@@ -169,23 +169,6 @@ parse_style9_custom_chars proc
         dec  bx
         jnz  @@copy_loop
 
-        mov  al, '|'
-        mov  ah, COLOR
-        or   cx, cx
-        jz   @@store_v
-
-        mov  bl, byte ptr ds:[si]
-        cmp  bl, ' '
-        je   @@store_v
-        cmp  bl, LINE_SEP
-        je   @@store_v
-
-        mov  al, bl
-        inc  si
-        dec  cx
-
-@@store_v:
-        mov  word ptr [di], ax
         mov  word ptr [FRAME_CHARS], offset FRAME_STYLE9_CUSTOM
         add  sp, 4
         ret
