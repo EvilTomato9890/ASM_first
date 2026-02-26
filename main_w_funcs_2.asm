@@ -561,9 +561,27 @@ FRAME_H     dw 0
 FRAME_WB    dw 0
 
 
-FRAME_STYLE1 db 0C9h, 0BBh, 0C8h, 0BCh, 0CDh, 0BAh ; ╔ ╗ ╚ ╝ ═ ║ ;TODO - Как перенести наверх
-FRAME_STYLE2 db '+', '+', '+', '+', '-', '|'       ; + + + + - |
-FRAME_STYLE3 db '#', '#', '#', '#', '#', '#'       ; # # # # # #
+FRAME_STYLE1 dw (07h shl 8) + 0C9h ; ╔
+             dw (07h shl 8) + 0BBh ; ╗
+             dw (07h shl 8) + 0C8h ; ╚
+             dw (07h shl 8) + 0BCh ; ╝
+             dw (07h shl 8) + 0CDh ; ═
+             dw (07h shl 8) + 0BAh ; ║
+
+
+FRAME_STYLE2 dw (07h shl 8) + '+' 
+             dw (07h shl 8) + '+' 
+             dw (07h shl 8) + '+' 
+             dw (07h shl 8) + '+' 
+             dw (07h shl 8) + '-' 
+             dw (07h shl 8) + '|'       
+
+FRAME_STYLE3 dw (07h shl 8) + '#' 
+             dw (07h shl 8) + '#' 
+             dw (07h shl 8) + '#' 
+             dw (07h shl 8) + '#' 
+             dw (07h shl 8) + '#' 
+             dw (07h shl 8) + '#'   
 
 FRAME_STYLE_TABLE dw offset FRAME_STYLE1
                   dw offset FRAME_STYLE2
