@@ -55,6 +55,7 @@ program_exit:
         call dos_exit
 
 ; ================================
+; Desc: Инициализирует DS и ES для работы с кодом и видеопамятью.
 ; Entry:  -
 ; Exit:   DS - DS=CS
 ;         ES - ES=VIDEO_SEG
@@ -70,6 +71,7 @@ init_runtime proc
 init_runtime endp
 
 ; ================================
+; Desc: Читает хвост команды, обрезает пробелы и разбирает стиль рамки.
 ; Entry:  DS:PSP 
 ; Exit:   SI - адрес текста
 ;         CX - длина
@@ -90,6 +92,7 @@ read_cmd_tail_trim_spaces proc
 read_cmd_tail_trim_spaces endp
 
 ; ================================
+; Desc: Обрабатывает префикс #N и выбирает ыенду.
 ; Entry:  DS:SI, CX - начало текста и длина
 ; Exit:   DS:SI, CX - возможно сдвинуты
 ;         FRAME_CHARS - выбранный стиль
@@ -130,6 +133,7 @@ parse_style_prefix proc
 parse_style_prefix endp
 
 ; ================================
+; Desc: Удаляет пробелы в конце текста.
 ; Entry:  DS:SI - начало 
 ;         CX - длина
 ; Exit:   CX - длина без пробелоы
@@ -160,6 +164,7 @@ trim_trailing_spaces proc
 trim_trailing_spaces endp
 
 ; ================================
+; Desc: Пропускает ведущие пробелы и сдвигает SI/CX на первый символ.
 ; Entry:  DS:SI, CX - текущая позиция и оставшаяся длина
 ; Exit:   SI, CX
 ; Destr:  AL
@@ -181,6 +186,7 @@ skip_leading_spaces proc
 skip_leading_spaces endp
 
 ; ================================
+; Desc: Считает число строк и максимальную длину строки без хвостовых пробелов.
 ; Entry:  DS:SI, CX - начало текста и длинна
 ; Exit:   BX    - макс длина
 ;         BP    - кол-во строк
@@ -243,6 +249,7 @@ measure_text proc
 measure_text endp
 
 ; ================================
+; Desc: Рисует рамку нужного размера и выводит внутри исходный текст.
 ; Entry:  CMD_PTR_VAR/CMD_LEN_VAR, FRAME_W/FRAME_H/FRAME_WB
 ; Exit:   -
 ; Destr:  AX, BX, CX, DX, DI, SI, BP
@@ -264,6 +271,7 @@ render_boxed_text proc
 render_boxed_text endp
 
 ; ================================
+; Desc: Вызывает отрисовку верхней, боковых и нижней частей рамки.
 ; Entry:  DI - аддрес места вывода текста
 ;         BX - макс ширина
 ;         DX - ширина в байтах
@@ -288,6 +296,7 @@ draw_frame_around_text proc
 draw_frame_around_text endp
 
 ; ================================
+; Desc: Рисует верхнюю границу рамки с углами и горизонтальной линией.
 ; Entry:  DI - аддрес места вывода текста
 ;         BX - ширина
 ; Exit:   -
@@ -317,6 +326,7 @@ draw_frame_top proc
 draw_frame_top endp
 
 ; ================================
+; Desc: Рисует левую и правую боковые границы рамки по высоте.
 ; Entry:  DI - аддрес места вывода текста
 ;         DX - ширина в байтах
 ;         BP - высота
@@ -347,6 +357,7 @@ draw_frame_sides proc
 draw_frame_sides endp
 
 ; ================================
+; Desc: Рисует нижнюю границу рамки с углами и горизонтальной линией.
 ; Entry:  DI - аддрес места вывода текста
 ;         BX - ширина
 ;         BP - высота 
@@ -382,6 +393,7 @@ draw_frame_bottom proc
 draw_frame_bottom endp
 
 ; ================================
+; Desc: Построчно разбирает и печатает текст внутри рамки.
 ; Entry:  DI - аддрес места вывода текста
 ;         BX - ширина
 ;         BP - высота
@@ -410,6 +422,7 @@ print_text_inside_frame proc
 print_text_inside_frame endp
 
 ; ================================
+; Desc: Выделяет текущую строку и вычисляет длину без хвостовых пробелов.
 ; Entry:  DS:SI, CX - текущая позиция и оставшаяся длина
 ; Exit:   DX - аддрес слева
 ;         AX - длинна
@@ -457,6 +470,7 @@ parse_line_trim endp
 
 
 ; ================================
+; Desc: Печатает строку и добивает оставшуюся ширину пробелами.
 ; Entry:  ES:DI                   
 ;         DS:DX - начало строки
 ;         AX - длина
@@ -502,6 +516,7 @@ print_line_padded endp
 
 
 ; ================================
+; Desc: Пропускает символ разделителя строки, если он есть.
 ; Entry:  DS:SI, CX - аддрес конца строки и длинна
 ; Exit:   SI, CX                  
 ; Destr:  AL
@@ -522,6 +537,7 @@ consume_line_separator endp
 
 
 ; ================================
+; Desc: Переводит указатель вывода на начало следующей строки внутри рамки.
 ; Entry:  DI - аддрес места вывода строки
 ; Exit:   DI - START_DI следующей строки
 ; Exp:    FRAME_WB = 2*FRAME_W
@@ -534,6 +550,7 @@ advance_di_next_row proc
 advance_di_next_row endp
 
 ; ================================
+; Desc: Завершает программу через DOS (int 21h, AH=4Ch).
 ; Entry:  -
 ; Exit:   -
 ; Destr:  AX
