@@ -13,7 +13,9 @@ start:
     call init_runtime
     call take_password
     call check_password
-      jz  @@incorrect_password
+    test dx, dx
+
+    jz  @@incorrect_password
     call draw_acces_granted
     jmp @@program_exit
 
@@ -85,18 +87,20 @@ draw_acces_NOT_granted endp
 ;       После Enter добавляет завершающий символ '$'.
 ; Entry:  -
 ; Exit:   BX - адрес первого символа введенного пароля в стеке
+;              (или адрес '$' при пустом вводе).
 ; Destr:  AX, BP
 ; Exp:    -
 ; ================================
 take_password proc
-    mov ah, 08h
-    mov bx, sp
+    mov bp, sp
 @@loop_start:
+    mov ah, 08h
     int 21h
     cmp al, 0Dh
     je  @@done
 
-    ; '$' заре'
+    ; '$' зарезервирован как терминатор для DOS-функции вывода 09h.
+    cmp al, '$'
     je  @@loop_start
 
     xor ah, ah
@@ -108,17 +112,23 @@ take_password proc
     xor ah, ah
     push ax
 
-endp
+    mov bx, bp
+    sub bx, 2
+
+    ; Кладем копию адреса возврата наверх стека, чтобы RET вернулся корректно.
+    push word ptr [bp]
+    ret
+take_password endp
 
 ; ================================
 ; Desc: Сравнивает две строки, оканчивающиеся на '$'.
 ; Entry:  SI - адрес первого символа введенного пароля в стеке.
 ;         DI - адрес начала эталонной строки в сегменте данных.
-; Exit:   ZF - если установлен, стрвыставлен
+; Exit:   ZF - если установлен, строки равны.
 ; Destr:  AX, DX
 ; Exp:    -
 ; ================================
-cmp_strings proc 
+cmp_strings proc
 @@cmp_loop:
     mov al, ss:[si]
     mov dl, [di]
@@ -159,7 +169,7 @@ check_password proc
     jne @@return_false
 
     mov dx, 0001h
-    ret 
+    ret
 
 @@return_false:
     xor dx, dx
