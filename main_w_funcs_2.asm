@@ -145,7 +145,7 @@ parse_style_prefix endp
 ;       Обязательные 6: TL TR BL BR H V.
 ; Entry: DS:SI, CX - позиция сразу после "#9"
 ; Exit:  При успехе: SI/CX сдвинуты после 6 символов, FRAME_CHARS=custom
-;        При ошибке: SI/CX восстановлены
+;        При мменьше 6-ти символов: SI/CX восстановлены
 ; Destr: AX, BX, DI
 ; ================================
 parse_style9_custom_chars proc
