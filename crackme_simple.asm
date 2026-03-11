@@ -13,9 +13,7 @@ start:
     call init_runtime
     call take_password
     call check_password
-    test dx, dx
-
-    jnz @@incorrect_password
+      jz  @@incorrect_password
     call draw_acces_granted
     jmp @@program_exit
 
@@ -55,7 +53,7 @@ dos_exit proc
 dos_exit endp
     
 ; ================================
-; Desc: Выводит на экран сообщение о прохождении проверки пароля
+; Desc: Выводит на экран сообщение о прохождении проверки пароля.
 ; Entry:  -
 ; Exit:   -
 ; Destr:  AX
@@ -65,9 +63,11 @@ draw_acces_granted proc
     mov ah, 09h
     mov dx, offset success_message
     int 21h
+    ret
+draw_acces_granted endp
 
 ; ================================
-; Desc: Выводит на экран сообщение о прохождении проверки пароля
+; Desc: Выводит на экран сообщение о непрохождении проверки пароля.
 ; Entry:  -
 ; Exit:   -
 ; Destr:  AX
@@ -77,12 +77,15 @@ draw_acces_NOT_granted proc
     mov ah, 09h
     mov dx, offset fail_message
     int 21h
+    ret
+draw_acces_NOT_granted endp
 
 ; ================================
-; Desc: Записывает введенный пароль на стек (храниться на стеке в обратном порядке)
+; Desc: Считывает пароль до Enter и сохраняет его на стеке.
+;       После Enter добавляет завершающий символ '$'.
 ; Entry:  -
-; Exit:   BX — место на стеке, где начинается пароль 
-; Destr:  AX
+; Exit:   BX - адрес первого символа введенного пароля в стеке
+; Destr:  AX, BP
 ; Exp:    -
 ; ================================
 take_password proc
@@ -90,66 +93,85 @@ take_password proc
     mov bx, sp
 @@loop_start:
     int 21h
-    dec sp
-    mov DS:[sp], al
-    cmp al, "$"
-    jne @@loop_start
+    cmp al, 0Dh
+    je  @@done
 
+    ; '$' заре'
+    je  @@loop_start
+
+    xor ah, ah
     push ax
-    ret
+    jmp @@loop_start
+
+@@done:
+    mov al, '$'
+    xor ah, ah
+    push ax
+
+endp
+
 ; ================================
-; Desc: Сравнивает 2 строки оканчивающиеся на $
-; Entry:  SI, DI — аддресa начала строу
-; Exit:   ZF — если выставлен, значит не равны
+; Desc: Сравнивает две строки, оканчивающиеся на '$'.
+; Entry:  SI - адрес первого символа введенного пароля в стеке.
+;         DI - адрес начала эталонной строки в сегменте данных.
+; Exit:   ZF - если установлен, стрвыставлен
 ; Destr:  AX, DX
 ; Exp:    -
 ; ================================
 cmp_strings proc 
 @@cmp_loop:
-    mov al, [si]
+    mov al, ss:[si]
     mov dl, [di]
 
     cmp al, dl
     jne @@cmp_done
 
-    cmp al, '$'
+    cmp dl, '$'
     je @@cmp_done
 
-    inc si
+    sub si, 2
     inc di
     jmp @@cmp_loop
 
 @@cmp_done:
     ret
+cmp_strings endp
 
 ; ================================
-; Desc: Проверяет введенный пароль
-; Entry:  BX — аддрес начала пароля в обратном порядке
-; Exit:   DX — совпали или нет
-; Destr:  AX
+; Desc: Проверяет введенный пароль.
+; Entry:  BX - адрес первого символа введенного пароля в стеке.
+; Exit:   DX - 1, если пароль совпал; 0 - иначе.
+; Destr:  AX, SI, DI
 ; Exp:    -
 ; ================================
 check_password proc
-    mov ax, [canary_num]
-    cmp ax, 0EBA1DEDAh
+    mov ax, word ptr [canary_num]
+    cmp ax, 0DEDAh
     jne @@return_false
 
+    mov ax, word ptr [canary_num + 2]
+    cmp ax, 0EBA1h
+    jne @@return_false
+
+    mov si, bx
+    mov di, offset correct_password
     call cmp_strings
     jne @@return_false
 
-    mov dx, 01h;
+    mov dx, 0001h
     ret 
 
 @@return_false:
     xor dx, dx
     ret
+check_password endp
 
 .data
 
 success_message  db "Happy Birthday!)$"
-fail_message     db "Acces denied$"
+fail_message     db "Access denied$"
 
 correct_password db "Porno$"
-canary_num       dw 0EBA1DEDAh
+canary_num       dd 0EBA1DEDAh
 
 end start
