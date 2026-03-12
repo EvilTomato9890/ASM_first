@@ -27,9 +27,9 @@ CH_V       equ 10d          ;(право и лево)
 
 
 start:
-        call init_runtime
+        call InitRuntime
 
-        call read_cmd_tail_trim_spaces      ; SI=ptr, CX=len, BX=len
+        call ReadCmdTailTrimSpaces      ; SI=ptr, CX=len, BX=len
         or   bx, bx
         jz   program_exit
 
@@ -39,7 +39,7 @@ start:
 
         mov  si, word ptr [CMD_PTR_VAR]
         mov  cx, word ptr [CMD_LEN_VAR]
-        call measure_text         ; BX=max_len, BP=lines_count
+        call MeasureText         ; BX=max_len, BP=lines_count
 
         mov  word ptr [FRAME_W], bx
         mov  word ptr [FRAME_H], bp
@@ -49,10 +49,10 @@ start:
         mov  word ptr [FRAME_WB], dx        ; 2*FRAME_W
 
 
-        call render_boxed_text
+        call RenderBoxedText
 
 program_exit:
-        call dos_exit
+        call DosExit
 
 ; ================================
 ; Desc: Инициализирует DS и ES для работы с кодом и видеопамятью.
@@ -61,14 +61,14 @@ program_exit:
 ;         ES - ES=VIDEO_SEG
 ; Destr:  AX
 ; ================================
-init_runtime proc
+InitRuntime proc
         push cs ;; TODO - Лучши ли mov?
         pop  ds
 
         mov  ax, VIDEO_SEG
         mov  es, ax
         ret
-init_runtime endp
+InitRuntime endp
 
 ; ================================
 ; Desc: Читает хвост команды, обрезает пробелы и разбирает стиль рамки.
@@ -78,18 +78,18 @@ init_runtime endp
 ;         BX - длина (копия CX)
 ; Destr:  AX, DI
 ; ================================
-read_cmd_tail_trim_spaces proc
+ReadCmdTailTrimSpaces proc
         xor  cx, cx
         mov  cl, byte ptr ds:[CMD_LEN]
         mov  si, CMD_TAIL
 
-        call skip_leading_spaces
-        call trim_trailing_spaces
-        call parse_style_prefix
+        call SkipLeadingSpaces
+        call TrimTrailingSpaces
+        call ParseStylePrefix
 
         mov  bx, cx
         ret
-read_cmd_tail_trim_spaces endp
+ReadCmdTailTrimSpaces endp
 
 ; ================================
 ; Desc: Обрабатывает префикс #N и выбирает ыенду.
@@ -99,7 +99,7 @@ read_cmd_tail_trim_spaces endp
 ; Exp:    После # есть символ
 ; Destr:  AX, BX, DX, AL
 ; ================================
-parse_style_prefix proc
+ParseStylePrefix proc
         cmp  cx, 2
         jb   @@done
 
@@ -130,15 +130,15 @@ parse_style_prefix proc
         jmp  @@trim_text
 
 @@custom_style:
-        call parse_style9_custom_chars
+        call ParseStyle9CustomChars
 
 @@trim_text:
-        call skip_leading_spaces
-        call trim_trailing_spaces
+        call SkipLeadingSpaces
+        call TrimTrailingSpaces
 
 @@done:
         ret
-parse_style_prefix endp
+ParseStylePrefix endp
 
 ; ================================
 ; Desc: Для префикса #9 считывает 6 символов рамки из хвоста.
@@ -148,11 +148,11 @@ parse_style_prefix endp
 ;        При ошибке: SI/CX восстановлены
 ; Destr: AX, BX, DI
 ; ================================
-parse_style9_custom_chars proc
+ParseStyle9CustomChars proc
         push si
         push cx
 
-        call skip_leading_spaces
+        call SkipLeadingSpaces
         cmp  cx, 6
         jb   @@restore
 
@@ -177,7 +177,7 @@ parse_style9_custom_chars proc
         pop  cx
         pop  si
         ret
-parse_style9_custom_chars endp
+ParseStyle9CustomChars endp
 
 ; ================================
 ; Desc: Удаляет пробелы в конце текста.
@@ -186,7 +186,7 @@ parse_style9_custom_chars endp
 ; Exit:   CX - длина без пробелоы
 ; Destr:  AX, DI
 ; ================================
-trim_trailing_spaces proc
+TrimTrailingSpaces proc
         or   cx, cx
         jz   @@done
 
@@ -208,7 +208,7 @@ trim_trailing_spaces proc
 
 @@done:
         ret
-trim_trailing_spaces endp
+TrimTrailingSpaces endp
 
 ; ================================
 ; Desc: Пропускает ведущие пробелы и сдвигает SI/CX на первый символ.
@@ -216,7 +216,7 @@ trim_trailing_spaces endp
 ; Exit:   SI, CX
 ; Destr:  AL
 ; ================================
-skip_leading_spaces proc
+SkipLeadingSpaces proc
 @@skip:
         or   cx, cx
         jz   @@done
@@ -230,7 +230,7 @@ skip_leading_spaces proc
         jmp  @@skip
 @@done:
         ret
-skip_leading_spaces endp
+SkipLeadingSpaces endp
 
 ; ================================
 ; Desc: Считает число строк и максимальную длину строки без хвостовых пробелов.
@@ -239,7 +239,7 @@ skip_leading_spaces endp
 ;         BP    - кол-во строк
 ; Destr:  AX, DX, DI, SI, CX
 ; ================================
-measure_text proc
+MeasureText proc
         xor  bx, bx           ; max_len
         xor  bp, bp           ; lines_count
 
@@ -249,7 +249,7 @@ measure_text proc
 @@next_line:
         inc  bp
 
-        call skip_leading_spaces
+        call SkipLeadingSpaces
 
         xor  di, di           ; cur_len
         xor  dx, dx           ; last_non_space_len
@@ -293,7 +293,7 @@ measure_text proc
 
 @@done:
         ret
-measure_text endp
+MeasureText endp
 
 ; ================================
 ; Desc: Рисует рамку нужного размера и выводит внутри исходный текст.
@@ -301,7 +301,7 @@ measure_text endp
 ; Exit:   -
 ; Destr:  AX, BX, CX, DX, DI, SI, BP
 ; ================================
-render_boxed_text proc
+RenderBoxedText proc
         mov  di, START_DI
         sub  di, 2                          
 
@@ -309,13 +309,13 @@ render_boxed_text proc
         mov  bp, word ptr [FRAME_H]
         mov  dx, word ptr [FRAME_WB]
 
-        call draw_frame_around_text
+        call DrawFrameAroundText
 
         mov  si, word ptr [CMD_PTR_VAR]
         mov  cx, word ptr [CMD_LEN_VAR]
-        call print_text_inside_frame
+        call PrintTextInsideFrame
         ret
-render_boxed_text endp
+RenderBoxedText endp
 
 ; ================================
 ; Desc: Вызывает отрисовку верхней, боковых и нижней частей рамки.
@@ -326,21 +326,21 @@ render_boxed_text endp
 ; Exit:   -
 ; Destr:  AX, CX, SI
 ; ================================
-draw_frame_around_text proc
+DrawFrameAroundText proc
         push di
-        call draw_frame_top
+        call DrawFrameTop
         pop  di
 
         push di
-        call draw_frame_sides
+        call DrawFrameSides
         pop  di
 
         push di
-        call draw_frame_bottom
+        call DrawFrameBottom
         pop  di
 
         ret
-draw_frame_around_text endp
+DrawFrameAroundText endp
 
 ; ================================
 ; Desc: Рисует верхнюю границу рамки с углами и горизонтальной линией.
@@ -349,28 +349,26 @@ draw_frame_around_text endp
 ; Exit:   -
 ; Destr:  AX, CX, DI, SI
 ; ================================
-draw_frame_top proc
+DrawFrameTop proc
         sub  di, ROW_BYTES                          ; DI = top-left
 
         mov  si, [FRAME_CHARS]
         mov  ax, word ptr [si + CH_TL]
-        mov  word ptr es:[di], ax
+        mov  dx, word ptr [si + CH_H]
+        mov  si, word ptr [si + CH_TR]
 
-        mov  ax, word ptr [si + CH_H]
-        add  di, 2
+        push bx
+        push bp
+
         mov  cx, bx
-        jcxz @@no_h
+        mov  bx, 1
+        mov  bp, 1
+        call DrawFrameRow
 
-@@top_h:
-        mov  word ptr es:[di], ax
-        add  di, 2
-        loop @@top_h
-
-@@no_h:
-        mov  ax, word ptr [si + CH_TR]
-        mov  word ptr es:[di], ax
+        pop  bp
+        pop  bx
         ret
-draw_frame_top endp
+DrawFrameTop endp
 
 ; ================================
 ; Desc: Рисует левую и правую боковые границы рамки по высоте.
@@ -380,28 +378,40 @@ draw_frame_top endp
 ; Exit:   -
 ; Destr:  AX, CX, DI, SI
 ; ================================
-draw_frame_sides proc
+DrawFrameSides proc
         mov  si, [FRAME_CHARS]
         mov  ax, word ptr [si + CH_V]
+        mov  si, ax
 
-        mov  cx, bp
+        mov  dx, (COLOR shl 8) + ' '
+
+        push bx
+        push bp
+
+        mov  bx, 1
+        mov  bp, 1
+
+        mov  cx, word ptr [FRAME_H]
         jcxz @@done
 
 @@loop_row:
-        mov  word ptr es:[di], ax            ; left side
+        push cx
+        push di
 
-        mov  si, di                          ; right side offset = di + 2 + dx
-        add  si, 2
-        add  si, dx
-        mov  word ptr es:[si], ax
+        mov  cx, word ptr [FRAME_W]
+        call DrawFrameRow
 
+        pop  di
         add  di, ROW_BYTES
+        pop  cx
         loop @@loop_row
 
 @@done:
+        pop  bp
+        pop  bx
         ret
 
-draw_frame_sides endp
+DrawFrameSides endp
 
 ; ================================
 ; Desc: Рисует нижнюю границу рамки с углами и горизонтальной линией.
@@ -411,8 +421,8 @@ draw_frame_sides endp
 ; Exit:   -
 ; Destr:  AX, CX, DI, SI
 ; ================================
-draw_frame_bottom proc
-        mov  cx, bp
+DrawFrameBottom proc
+        mov  cx, word ptr [FRAME_H]
         jcxz @@at_bottom
 
 @@move_down:
@@ -421,23 +431,58 @@ draw_frame_bottom proc
 @@at_bottom:
         mov  si, [FRAME_CHARS]
         mov  ax, word ptr [si + CH_BL]
-        mov  word ptr es:[di], ax
+        mov  dx, word ptr [si + CH_H]
+        mov  si, word ptr [si + CH_BR]
 
-        mov  ax, word ptr [si + CH_H]
-        add  di, 2
+        push bx
+        push bp
+
         mov  cx, bx
-        jcxz @@no_h
+        mov  bx, 1
+        mov  bp, 1
+        call DrawFrameRow
 
-@@bot_h:
+        pop  bp
+        pop  bx
+        ret
+DrawFrameBottom endp
+
+; ================================
+; Desc: Рисует строку рамки из трёх сегментов: левый, средний, правый.
+; Entry: ES:DI - адрес вывода
+;        AX, BX - левый символ и его количество
+;        DX, CX - средний символ и его количество
+;        SI, BP - правый символ и его количество
+; Exit:  DI - адрес конца нарисованной строки
+; Destr: CX
+; ================================
+DrawFrameRow proc
+@@draw_left:
+        or   bx, bx
+        jz   @@draw_mid
         mov  word ptr es:[di], ax
         add  di, 2
-        loop @@bot_h
+        dec  bx
+        jmp  @@draw_left
 
-@@no_h:
-        mov  ax, word ptr [si + CH_BR]
-        mov  word ptr es:[di], ax
+@@draw_mid:
+        jcxz @@draw_right
+@@draw_mid_loop:
+        mov  word ptr es:[di], dx
+        add  di, 2
+        loop @@draw_mid_loop
+
+@@draw_right:
+        or   bp, bp
+        jz   @@done
+        mov  word ptr es:[di], si
+        add  di, 2
+        dec  bp
+        jmp  @@draw_right
+
+@@done:
         ret
-draw_frame_bottom endp
+DrawFrameRow endp
 
 ; ================================
 ; Desc: Построчно разбирает и печатает текст внутри рамки.
@@ -449,24 +494,24 @@ draw_frame_bottom endp
 ; Destr:  AX, BX, CX, DX, DI, SI, BP
 ; ================================
 
-print_text_inside_frame proc
+PrintTextInsideFrame proc
         add  di, 2                           
 
         mov  bp, word ptr [FRAME_H]
 
 @@line_loop:
-        call parse_line_trim                 ; DX=line_start, AX=len, SI/CX -> конец строки
+        call ParseLineTrim                 ; DX=line_start, AX=len, SI/CX -> конец строки
 
-        call print_line_padded                
+        call PrintLinePadded                
 
-        call consume_line_separator           
+        call ConsumeLineSeparator           
 
-        call advance_di_next_row             ; DI -> START_DI
+        call AdvanceDiNextRow             ; DI -> START_DI
 
         dec  bp
         jnz  @@line_loop
         ret
-print_text_inside_frame endp
+PrintTextInsideFrame endp
 
 ; ================================
 ; Desc: Выделяет текущую строку и вычисляет длину без хвостовых пробелов.
@@ -477,11 +522,11 @@ print_text_inside_frame endp
 ; Exp:    - 
 ; Destr:  AX, DX, AL
 ; ================================
-parse_line_trim proc
+ParseLineTrim proc
         push di
         push bx
 
-        call skip_leading_spaces
+        call SkipLeadingSpaces
 
         mov  dx, si                          ; DX = начало строки
 
@@ -513,7 +558,7 @@ parse_line_trim proc
         pop  bx
         pop  di
         ret
-parse_line_trim endp
+ParseLineTrim endp
 
 
 ; ================================
@@ -525,7 +570,7 @@ parse_line_trim endp
 ; Exit:   DI - аддрес места конца вывода текста
 ; Destr:  AX, DX
 ; ================================
-print_line_padded proc
+PrintLinePadded proc
         push si 
         push cx 
         push bp
@@ -575,7 +620,7 @@ print_line_padded proc
         pop  cx
         pop  si
         ret
-print_line_padded endp
+PrintLinePadded endp
 
 
 ; ================================
@@ -584,7 +629,7 @@ print_line_padded endp
 ; Exit:   SI, CX                  
 ; Destr:  AL
 ; ================================
-consume_line_separator proc
+ConsumeLineSeparator proc
         or   cx, cx
         jz   @@done
 
@@ -596,7 +641,7 @@ consume_line_separator proc
         dec  cx
 @@done:
         ret
-consume_line_separator endp
+ConsumeLineSeparator endp
 
 
 ; ================================
@@ -606,11 +651,11 @@ consume_line_separator endp
 ; Exp:    FRAME_WB = 2*FRAME_W
 ; Destr:  AX
 ; ================================
-advance_di_next_row proc
+AdvanceDiNextRow proc
         sub  di, word ptr [FRAME_WB]
         add  di, ROW_BYTES
         ret
-advance_di_next_row endp
+AdvanceDiNextRow endp
 
 ; ================================
 ; Desc: Завершает программу через DOS (int 21h, AH=4Ch).
@@ -618,11 +663,11 @@ advance_di_next_row endp
 ; Exit:   -
 ; Destr:  AX
 ; ================================
-dos_exit proc
+DosExit proc
         mov  ax, 4C00h
         int  21h
         ret
-dos_exit endp
+DosExit endp
 
 
 .data
