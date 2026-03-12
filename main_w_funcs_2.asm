@@ -388,9 +388,6 @@ DrawFrameSides proc
         push bx
         push bp
 
-        mov  bx, 1
-        mov  bp, 1
-
         mov  cx, word ptr [FRAME_H]
         jcxz @@done
 
@@ -398,7 +395,9 @@ DrawFrameSides proc
         push cx
         push di
 
+        mov  bx, 1
         mov  cx, word ptr [FRAME_W]
+        mov  bp, 1
         call DrawFrameRow
 
         pop  di
